@@ -1,6 +1,6 @@
 # Lecture Exam Coach Agent
 
-강의 PDF를 기반으로 시험 공부를 돕는 FastAPI 기반 Agent 서비스입니다. 현재 단계는 Prompt 7 산출물로, Agent API에 Middleware와 운영 안정성 가드레일을 적용한 상태입니다.
+강의 PDF를 기반으로 시험 공부를 돕는 FastAPI 기반 Agent 서비스입니다. Agent API에 Middleware와 운영 안정성 가드레일을 적용한 상태입니다.
 
 ## 현재 구현 범위
 
@@ -302,17 +302,6 @@ curl http://127.0.0.1:3000/health
 }
 ```
 
-## Web UI
 
-`GET /`는 `app/web/index.html`을 반환하고, `/static/*`는 CSS와 JavaScript를 제공합니다. 웹 화면에서는 다음 작업을 할 수 있습니다.
 
-- Agent 채팅 실행
-- `data/pdfs` 폴더 PDF 인덱싱
-- 현재 `session_id`의 대화 이력, 최근 문제, 최근 답안, 약점 태그, 채점 결과 조회
 
-별도 프론트엔드 빌드 과정은 없습니다.
-
-## 다음 단계
-
-Prompt 8에서 제출용 README와 Workflow 다이어그램 설명을 최종 정리합니다.
-# agentplus
