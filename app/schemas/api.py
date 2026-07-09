@@ -13,9 +13,9 @@ class ErrorResponse(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    message: str = Field(min_length=1)
-    session_id: str = Field(default="default", min_length=1)
-    user_id: str = Field(default="anonymous", min_length=1)
+    message: str = Field(min_length=1, max_length=1000)
+    session_id: str = Field(default="default", min_length=1, max_length=100)
+    user_id: str = Field(default="anonymous", min_length=1, max_length=100)
 
 
 class ChatResponse(BaseModel):

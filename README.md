@@ -1,6 +1,6 @@
 # Lecture Exam Coach Agent
 
-강의 PDF를 기반으로 시험 공부를 돕는 FastAPI 기반 Agent 서비스입니다. 현재 단계는 Prompt 1 산출물로, 실행 가능한 최소 API 서버와 이후 LangChain/LangGraph Agent 구현을 위한 프로젝트 골격을 제공합니다.
+강의 PDF를 기반으로 시험 공부를 돕는 FastAPI 기반 Agent 서비스입니다. 현재 단계는 Prompt 7 산출물로, Agent API에 Middleware와 운영 안정성 가드레일을 적용한 상태입니다.
 
 ## 현재 구현 범위
 
@@ -8,10 +8,12 @@
 - `/health` 헬스체크 API
 - LangChain / LangGraph 구현을 위한 패키지 구조
 - PDF 기반 RAG 인덱싱 및 검색 함수
-- 시험공부 코치용 필수 Tool 2종
-- LangGraph StateGraph 기반 Agent 흐름
+- 시험공부 코치용 Tool 3종
+- LLM Router와 LangGraph StateGraph 기반 Agent 흐름
 - 세션 기반 메모리와 구조화된 채점 결과
 - Agent, PDF 인덱싱, 세션 조회 FastAPI 엔드포인트
+- 요청/응답 로깅 Middleware와 공통 에러 처리
+- 채팅 입력 길이 제한, PDF 미인덱싱 가드레일, 일반 질문 분리 라우팅
 - 빌드 없는 정적 웹 UI
 - `.env` 기반 설정 로딩
 - 기본 의존성 목록
@@ -33,6 +35,8 @@
 │   │   ├── health.py
 │   │   ├── pdfs.py
 │   │   └── sessions.py
+│   ├── middleware
+│   │   └── operations.py
 │   ├── memory
 │   │   └── store.py
 │   ├── core
@@ -120,10 +124,15 @@ retriever = get_retriever(top_k=4)
 
 ## Study Coach Tools
 
-Agent가 선택해서 사용할 수 있는 필수 Tool 2가지를 구현했습니다. Tool 입력과 출력은 Pydantic 스키마로 정의되어 있습니다.
+Agent가 선택해서 사용할 수 있는 Tool 3가지를 구현했습니다. Tool 입력과 출력은 Pydantic 스키마로 정의되어 있습니다.
 
 ```python
-from app.tools import STUDY_TOOLS, concept_explain_tool, quiz_generate_tool
+from app.tools import (
+    STUDY_TOOLS,
+    answer_grade_tool,
+    concept_explain_tool,
+    quiz_generate_tool,
+)
 
 concept_result = concept_explain_tool.invoke(
     {
@@ -141,6 +150,15 @@ quiz_result = quiz_generate_tool.invoke(
         "rag_context": [],
     }
 )
+
+grade_result = answer_grade_tool.invoke(
+    {
+        "user_answer": "사용자 답안",
+        "question": "최근 생성된 문제",
+        "correct_answer": "기준 답안",
+        "rag_context": [],
+    }
+)
 ```
 
 - `concept_explain_tool`: 사용자 질문과 RAG 검색 결과를 바탕으로 개념 설명, 핵심 포인트, 출처, 후속 질문을 반환합니다.
@@ -149,7 +167,9 @@ quiz_result = quiz_generate_tool.invoke(
 
 ## LangGraph Workflow
 
-`app/agent/graph.py`는 사용자 요청을 분석한 뒤 조건부 분기로 필요한 노드를 실행합니다. 현재 실제 Tool 실행은 `concept_explain_tool`, `quiz_generate_tool`에 연결되어 있고, 답안 채점 이후의 약점 분석과 복습 계획 경로는 다음 단계에서 세부 Tool을 붙일 수 있도록 노드 흐름만 준비했습니다.
+`app/agent/graph.py`는 LLM Router로 사용자 요청 의도를 먼저 분류한 뒤 조건부 분기로 필요한 Tool 노드를 실행합니다. OpenAI API Key가 없거나 LLM 분류가 실패하면 키워드 기반 fallback 분류를 사용합니다.
+
+분류 타입은 `concept_explain`, `quiz_generate`, `answer_grade`, `general_question`, `fallback`입니다. `general_question`은 날씨, 뉴스, 잡담처럼 강의 PDF 기반 학습 기능과 무관한 요청이며, RAG와 학습 Tool을 호출하지 않고 LLM이 직접 답변합니다. 단, 웹 검색 도구가 없으므로 실시간 정보가 필요한 질문은 확인할 수 없다고 답하도록 제한합니다.
 
 ```python
 from app.agent import draw_workflow_mermaid, get_graph
@@ -172,9 +192,8 @@ mermaid = draw_workflow_mermaid()
 analyze_request
 ├── concept_explain
 ├── quiz_generate
-├── answer_grade -> weakness_analysis -> review_plan
-├── weakness_analysis -> review_plan
-├── review_plan
+├── answer_grade
+├── general_question
 └── fallback
 ```
 
@@ -195,7 +214,7 @@ analyze_request
 }
 ```
 
-LangGraph에서는 `answer_grade -> weakness_analysis -> review_plan` 순서로 이어져 오답 개념과 복습 계획을 세션 상태에 누적합니다.
+LangGraph에서는 `answer_grade`가 채점 결과, 점수, 해설, 정답/기준 답안, 오답 이유를 반환합니다. 여러 문항 답안을 줄별로 입력하면 문항별로 개별 채점합니다.
 
 ## API
 
@@ -239,6 +258,16 @@ API 오류는 아래처럼 공통 형식으로 반환합니다.
 }
 ```
 
+### Middleware / 운영 안정성
+
+`app/main.py`에서 `OperationsMiddleware`와 공통 exception handler를 등록합니다. Middleware 구현 위치는 `app/middleware/operations.py`입니다.
+
+- 모든 요청의 method, path, status, 처리 시간을 로그로 남깁니다.
+- 모든 응답에 `X-Process-Time-Ms` 헤더를 추가합니다.
+- 예상치 못한 예외는 `success=false`, `error_code`, `message` 형식의 공통 JSON으로 반환합니다.
+- `/api/chat`의 `message`는 최대 1000자, `session_id`와 `user_id`는 최대 100자로 제한합니다.
+- PDF 벡터스토어가 비어 있는 상태에서 개념 설명 또는 예상문제 생성을 요청하면 409 응답과 함께 먼저 `/api/pdfs/index`를 실행하라는 가드레일 메시지를 반환합니다.
+
 ## 헬스체크
 
 ```bash
@@ -268,5 +297,5 @@ curl http://127.0.0.1:3000/health
 
 ## 다음 단계
 
-Prompt 7부터 Middleware와 운영 안정성, 제출용 README 정리를 순서대로 구현합니다.
+Prompt 8에서 제출용 README와 Workflow 다이어그램 설명을 최종 정리합니다.
 # agentplus

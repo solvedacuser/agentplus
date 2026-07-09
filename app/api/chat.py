@@ -1,10 +1,12 @@
 from fastapi import APIRouter
 
-from app.agent import get_graph
+from app.agent.graph import classify_request, get_graph
 from app.api.errors import error_response
+from app.rag import is_vector_store_ready
 from app.schemas.api import ChatRequest, ChatResponse, ErrorResponse
 
 router = APIRouter(prefix="/api", tags=["chat"])
+RAG_REQUIRED_REQUEST_TYPES = {"concept_explain", "quiz_generate"}
 
 
 @router.post(
@@ -13,6 +15,14 @@ router = APIRouter(prefix="/api", tags=["chat"])
     responses={500: {"model": ErrorResponse}},
 )
 def chat(request: ChatRequest):
+    request_type = classify_request(request.message)
+    if request_type in RAG_REQUIRED_REQUEST_TYPES and not is_vector_store_ready():
+        return error_response(
+            message="PDF가 아직 인덱싱되지 않았습니다. 먼저 /api/pdfs/index를 실행해주세요.",
+            status_code=409,
+            error_code="rag_not_indexed",
+        )
+
     try:
         result = get_graph().invoke(
             {

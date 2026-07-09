@@ -7,8 +7,7 @@ RequestType = Literal[
     "concept_explain",
     "quiz_generate",
     "answer_grade",
-    "weakness_analysis",
-    "review_plan",
+    "general_question",
     "fallback",
 ]
 

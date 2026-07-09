@@ -20,6 +20,126 @@
         </div>
       </header>
 
+      <section class="agent-overview" aria-labelledby="agentOverviewTitle">
+        <div class="overview-intro">
+          <p class="eyebrow">Agent Overview</p>
+          <h2 id="agentOverviewTitle">강의 PDF 기반 시험공부 코치 Agent</h2>
+          <p>
+            이 Agent는 사용자의 자연어 요청을 분석해 개념 설명, 예상문제 생성,
+            답안 채점 Tool을 선택하고 실행합니다. 개념 설명과 문제 생성은 먼저
+            PDF를 인덱싱해 만든 RAG 검색 결과를 근거로 사용합니다.
+          </p>
+        </div>
+
+        <div class="overview-grid">
+          <section class="overview-block" aria-labelledby="toolIntroTitle">
+            <div class="section-heading">
+              <p class="eyebrow">Tools</p>
+              <h3 id="toolIntroTitle">Agent가 실행하는 Tool</h3>
+            </div>
+            <dl class="tool-list">
+              <div>
+                <dt>concept_explain_tool</dt>
+                <dd>PDF/RAG 검색 결과를 바탕으로 개념 설명, 핵심 포인트, 출처, 후속 질문을 반환합니다.</dd>
+              </div>
+              <div>
+                <dt>quiz_generate_tool</dt>
+                <dd>선택한 주제에 대해 객관식 또는 단답형 예상문제와 정답, 해설, 출처를 생성합니다.</dd>
+              </div>
+              <div>
+                <dt>answer_grade_tool</dt>
+                <dd>
+                  최근 생성된 문제와 세션 메모리를 기준으로 사용자 답안을 채점합니다.
+                  한 문항 답안뿐 아니라 줄 단위로 번호를 붙인 다문항 답안도 한 번에 처리합니다.
+                </dd>
+              </div>
+            </dl>
+          </section>
+
+          <section class="overview-block" aria-labelledby="promptExamplesTitle">
+            <div class="section-heading">
+              <p class="eyebrow">Prompt Examples</p>
+              <h3 id="promptExamplesTitle">클릭해서 바로 입력하기</h3>
+            </div>
+            <div class="prompt-group">
+              <p>개념 설명</p>
+              <div class="tool-chip-row prompt-examples">
+                <button class="tool-chip" type="button" data-prompt="[PDF 내용] 개념 설명해줘">
+                  [PDF 내용] 설명
+                </button>
+              </div>
+            </div>
+            <div class="prompt-group">
+              <p>예상문제 생성</p>
+              <div class="tool-chip-row prompt-examples">
+                <button class="tool-chip" type="button" data-prompt="[PDF 내용] 예상문제 3개 만들어줘">
+                  [PDF 내용] 3문항
+                </button>
+              </div>
+            </div>
+            <div class="prompt-group">
+              <p>답안 채점</p>
+              <div class="tool-chip-row prompt-examples">
+                <button class="tool-chip" type="button" data-prompt="답안 채점: 도구를 사용해 목표를 수행하는 AI">
+                  단일 답안
+                </button>
+                <button class="tool-chip" type="button" data-prompt="답안 채점:
+1번: Agent는 사용자의 목표를 이해하고 필요한 도구를 선택해 실행하는 구조입니다.
+2번: RAG는 외부 강의 자료를 검색해 답변 근거를 보강합니다.
+3번: Tool은 Agent가 실제 작업을 수행하기 위해 호출하는 함수입니다.">
+                  다문항 답안
+                </button>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <section class="grading-guide" aria-labelledby="gradingGuideTitle">
+          <div class="section-heading">
+            <p class="eyebrow">Multi-question Grading</p>
+            <h3 id="gradingGuideTitle">답안 채점은 다문항 입력도 가능합니다</h3>
+          </div>
+          <div class="grading-grid">
+            <div>
+              <h4>입력 형식</h4>
+              <pre class="prompt-sample">답안 채점:
+1번: 첫 번째 문제에 대한 내 답안
+2번: 두 번째 문제에 대한 내 답안
+3번: 세 번째 문제에 대한 내 답안</pre>
+            </div>
+            <div>
+              <h4>동작 방식</h4>
+              <ul class="note-list">
+                <li>최근 생성된 quiz의 1번, 2번, 3번 문제와 사용자의 번호별 답안을 매칭합니다.</li>
+                <li>각 문항마다 `answer_grade_tool`을 개별 호출해 정답 여부, 점수, 해설을 만듭니다.</li>
+                <li>채점 결과는 세션 메모리에 저장되고 평균 점수와 정답 개수가 함께 요약됩니다.</li>
+                <li>번호 없이 입력하면 최근 quiz의 1번 문제에 대한 단일 답안으로 처리됩니다.</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section class="agent-flow" aria-labelledby="agentFlowTitle">
+          <div class="section-heading">
+            <p class="eyebrow">Execution Flow</p>
+            <h3 id="agentFlowTitle">AGENT 실행 과정</h3>
+          </div>
+          <ol class="flow-list">
+            <li>Index PDFs</li>
+            <li>Load PDFs</li>
+            <li>Split Pages/Chunks</li>
+            <li>Create Embeddings</li>
+            <li>Save Vector Store</li>
+            <li>User Prompt</li>
+            <li>classify_request</li>
+            <li>Retrieve Context</li>
+            <li>Run Tool</li>
+            <li>Save Session Memory</li>
+            <li>Return Response</li>
+          </ol>
+        </section>
+      </section>
+
       <main class="workspace">
         <aside class="tools-panel" aria-labelledby="toolsTitle">
           <div class="panel-heading">
@@ -76,37 +196,23 @@
             </button>
           </div>
 
-          <div class="identity-grid">
-            <label>
-              Session ID
-              <input id="sessionIdInput" autocomplete="off" />
-            </label>
-            <label>
-              User ID
-              <input id="userIdInput" autocomplete="off" />
-            </label>
-          </div>
-
           <section class="tool-strip" aria-labelledby="availableToolsTitle">
             <div>
               <p class="eyebrow">Available Tools</p>
               <h3 id="availableToolsTitle">Agent can run these actions</h3>
             </div>
             <div class="tool-chip-row">
-              <button class="tool-chip" type="button" data-prompt="Agentic AI 개념 설명해줘">
+              <button class="tool-chip" type="button" data-prompt="[PDF 내용] 개념 설명해줘">
                 Concept Explain
               </button>
-              <button class="tool-chip" type="button" data-prompt="Agentic AI 예상문제 3개 만들어줘">
+              <button class="tool-chip" type="button" data-prompt="[PDF 내용] 예상문제 3개 만들어줘">
                 Quiz Generate
               </button>
-              <button class="tool-chip" type="button" data-prompt="답안 채점: 제가 쓴 답은 Agent가 도구를 선택해 작업을 수행하는 구조입니다.">
+              <button class="tool-chip" type="button" data-prompt="답안 채점:
+1번: Agent는 사용자의 목표를 이해하고 필요한 도구를 선택해 실행하는 구조입니다.
+2번: RAG는 외부 강의 자료를 검색해 답변 근거를 보강합니다.
+3번: Tool은 Agent가 실제 작업을 수행하기 위해 호출하는 함수입니다.">
                 Answer Grade
-              </button>
-              <button class="tool-chip" type="button" data-prompt="내 약점 분석해줘">
-                Weakness Analysis
-              </button>
-              <button class="tool-chip" type="button" data-prompt="복습 계획 추천해줘">
-                Review Plan
               </button>
             </div>
           </section>
@@ -114,7 +220,7 @@
           <div id="messageList" class="message-list" aria-live="polite"></div>
 
           <form id="chatForm" class="composer">
-            <textarea id="messageInput" rows="3" placeholder="예: Agentic AI 개념 설명해줘"></textarea>
+            <textarea id="messageInput" rows="3" placeholder="예: [PDF 내용] 개념 설명해줘"></textarea>
             <button id="sendButton" type="submit">Send</button>
           </form>
         </section>

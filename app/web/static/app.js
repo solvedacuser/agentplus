@@ -1,13 +1,11 @@
 const state = {
   sessionId: localStorage.getItem("examCoachSessionId") || createSessionId(),
-  userId: localStorage.getItem("examCoachUserId") || "demo-user",
+  userId: "demo-user",
 };
 
 const elements = {
   healthDot: document.querySelector("#healthDot"),
   healthText: document.querySelector("#healthText"),
-  sessionIdInput: document.querySelector("#sessionIdInput"),
-  userIdInput: document.querySelector("#userIdInput"),
   messageList: document.querySelector("#messageList"),
   messageInput: document.querySelector("#messageInput"),
   chatForm: document.querySelector("#chatForm"),
@@ -27,11 +25,7 @@ const elements = {
 init();
 
 function init() {
-  elements.sessionIdInput.value = state.sessionId;
-  elements.userIdInput.value = state.userId;
-
   localStorage.setItem("examCoachSessionId", state.sessionId);
-  localStorage.setItem("examCoachUserId", state.userId);
 
   elements.chatForm.addEventListener("submit", handleChatSubmit);
   elements.indexButton.addEventListener("click", handleIndexPdfs);
@@ -40,11 +34,11 @@ function init() {
   elements.toolChips.forEach((button) => {
     button.addEventListener("click", handleToolChipClick);
   });
-  elements.sessionIdInput.addEventListener("change", updateIdentity);
-  elements.userIdInput.addEventListener("change", updateIdentity);
-
   checkHealth();
-  appendMessage("assistant", "개념 설명, 예상문제 생성, 답안 채점, 복습 계획을 요청할 수 있습니다.");
+  appendMessage(
+    "assistant",
+    "개념 설명, 예상문제 생성, 답안 채점을 요청할 수 있습니다.",
+  );
 }
 
 function handleToolChipClick(event) {
@@ -58,10 +52,9 @@ function createSessionId() {
 }
 
 function updateIdentity() {
-  state.sessionId = elements.sessionIdInput.value.trim() || "default";
-  state.userId = elements.userIdInput.value.trim() || "anonymous";
+  state.sessionId = state.sessionId || "default";
+  state.userId = "demo-user";
   localStorage.setItem("examCoachSessionId", state.sessionId);
-  localStorage.setItem("examCoachUserId", state.userId);
 }
 
 async function checkHealth() {
@@ -226,6 +219,10 @@ function renderToolResult(result) {
 
   if (result.questions) {
     elements.recentQuiz.textContent = formatJson(result);
+  }
+
+  if (result.grading_results) {
+    elements.gradingResults.textContent = formatJson(result.grading_results);
   }
 
   if (Object.prototype.hasOwnProperty.call(result, "is_correct")) {

@@ -47,6 +47,15 @@ def retrieve_context(query: str, top_k: int | None = None) -> list[RetrievedCont
     )
 
 
+def is_vector_store_ready() -> bool:
+    settings = get_settings()
+    store = LocalVectorStore(settings.vector_store_path)
+    try:
+        return len(store.load()) > 0
+    except Exception:
+        return False
+
+
 def get_retriever(top_k: int | None = None) -> Callable[[str], list[RetrievedContext]]:
     def retriever(query: str) -> list[RetrievedContext]:
         return retrieve_context(query=query, top_k=top_k)

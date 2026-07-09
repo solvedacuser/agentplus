@@ -57,8 +57,19 @@ def remember_grading_result(session_id: str, grading_result: dict[str, Any]) -> 
     memory.grading_results.append(grading_result)
     memory.weakness_tags = _merge_unique(
         memory.weakness_tags,
-        grading_result.get("weakness_tags", []),
+        _extract_weakness_tags(grading_result),
     )
+
+
+def _extract_weakness_tags(grading_result: dict[str, Any]) -> list[str]:
+    if "weakness_tags" in grading_result:
+        return grading_result.get("weakness_tags", [])
+
+    result = grading_result.get("result", {})
+    if isinstance(result, dict):
+        return result.get("weakness_tags", [])
+
+    return []
 
 
 def _merge_unique(left: list[str], right: list[str]) -> list[str]:
