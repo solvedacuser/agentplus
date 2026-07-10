@@ -35,9 +35,9 @@
 ```mermaid
 flowchart LR
     User[사용자] --> Web[정적 Web UI<br/>app/web]
-    Web --> ChatAPI[POST /api/chat]
-    Web --> PdfAPI[POST /api/pdfs/index]
-    Web --> SessionAPI[GET /api/sessions/{session_id}]
+    Web --> ChatAPI["POST /api/chat"]
+    Web --> PdfAPI["POST /api/pdfs/index"]
+    Web --> SessionAPI["GET /api/sessions/{session_id}"]
 
     ChatAPI --> Middleware[OperationsMiddleware<br/>로깅, 처리시간 헤더, 에러 응답]
     PdfAPI --> Middleware
